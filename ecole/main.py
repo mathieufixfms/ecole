@@ -9,6 +9,7 @@ from datetime import date
 from business import school
 from business.school import School
 from daos.dao import Dao
+from daos.address_dao import AddressDao
 from daos.course_dao import CourseDao
 from daos.student_dao import StudentDao
 from daos.teacher_dao import TeacherDao
@@ -18,6 +19,71 @@ from models.student import Student
 from models.teacher import Teacher
 
 
+def update_student_name(school: School) -> None:
+	"""Demande confirmation puis modifie le prénom et le nom d'un étudiant."""
+	modify_student = input("Voulez-vous modifier un étudiant ? (oui/non) : ").strip().lower()
+	if modify_student not in ("oui", "o", "y"):
+		print("Modification de l'étudiant annulée.")
+		return
+	
+	try:
+		student_nbr = int(input("Entrez le numéro de l'étudiant à modifier : "))
+	except ValueError:
+		print("Le numéro de l'étudiant doit être un nombre entier.")
+		return
+	
+	student_to_update = school.get_student_by_id(student_nbr)
+	if student_to_update is None:
+		print(f"Aucun étudiant trouvé avec le numéro {student_nbr}.")
+		return
+	
+	print(
+		f"Étudiant trouvé : prénom = {student_to_update.first_name}, "
+		f"nom = {student_to_update.last_name}"
+	)
+	new_first_name = input("Entrez le nouveau prénom : ").strip()
+	new_last_name = input("Entrez le nouveau nom : ").strip()
+	if not new_first_name or not new_last_name:
+		print("Le prénom et le nom ne peuvent pas être vides.")
+		return
+	
+	student_to_update.first_name = new_first_name
+	student_to_update.last_name = new_last_name
+	updated = StudentDao().update(student_to_update)
+	print("Nom et prénom ont été mis à jour." if updated else "Le nom et prénom n'ont pas été mis à jour.")
+
+
+def create_student(school: School) -> None:
+	"""Demande confirmation puis crée un étudiant avec son adresse."""
+	create_confirmation = input("Voulez-vous créer un étudiant ? (oui/non) : ").strip().lower()
+	if create_confirmation not in ("oui", "o", "y"):
+		print("Création de l'étudiant annulée.")
+		return
+	
+	first_name = input("Entrez le prénom de l'étudiant : ").strip()
+	last_name = input("Entrez le nom de l'étudiant : ").strip()
+	try:
+		age = int(input("Entrez l'âge de l'étudiant : "))
+		postal_code = int(input("Entrez le code postal : "))
+	except ValueError:
+		print("L'âge et le code postal doivent être des nombres entiers.")
+		return
+	
+	street = input("Entrez la rue : ").strip()
+	city = input("Entrez la ville : ").strip()
+	if not first_name or not last_name or not street or not city:
+		print("Le prénom, le nom, la rue et la ville sont obligatoires.")
+		return
+	if age < 0 or postal_code < 0:
+		print("L'âge et le code postal doivent être positifs.")
+		return
+	
+	student = Student(first_name, last_name, age)
+	student.address = Address(street, city, postal_code)
+	StudentDao().create(student)
+	school.add_student(student)
+	print(f"Étudiant ajouté : {student}")
+
 
 def main() -> None:
 	"""Programme principal."""
@@ -25,71 +91,103 @@ def main() -> None:
 --------------------------
 Bienvenue dans notre école
 --------------------------""")
-
+	
 	school: School = School()
-
-	# Création de Bob avec son adresse, puis enregistrement en base.
-	#bob = Student("Bob", "Marley", 14)
-	#bob.address = Address("1 rue des Ecoles", "Toulouse", 31000)
-	#school.add_student(bob)
-	#StudentDao().create(bob)
-	#print(f"Etudiant ajoute : {bob}")
-
+	
+	# Demande de création d'un étudiant
+	create_student(school)
+	
 	# Création d'un teacher avec sa personne et son adresse.
-	#jeanne = Teacher("jeanne", "D'arc", 40, date(2026, 9, 9))
-	#jeanne.address = Address("2 rue du buchet", "Toulouse", 31000)
-	#school.add_teacher(jeanne)
-	#school.add_address(jeanne.address)
-	#school.persons.append(jeanne)
-	#TeacherDao().create(jeanne)
-	#print(f"Teacher ajoute : {jeanne}")
-
+	# jeanne = Teacher("jeanne", "D'arc", 40, date(2026, 9, 9))
+	# jeanne.address = Address("2 rue du buchet", "Toulouse", 31000)
+	# school.add_teacher(jeanne)
+	# school.add_address(jeanne.address)
+	# school.persons.append(jeanne)
+	# TeacherDao().create(jeanne)
+	# print(f"Teacher ajoute : {jeanne}")
+	
 	## Suppression d'un student de la BD
-	#print("suppression de l'étudiant :")
-	#student_to_delete = school.get_student_by_id(5)
-	#if student_to_delete is None:
-	#print("Aucun étudiant trouvé avec l'id 5.")
-	#else:
-	#deleted = StudentDao().delete(student_to_delete)
-	#print("Étudiant 5 supprimé." if deleted else "L'étudiant 5 n'a pas été supprimé.")
-
+	# print("suppression de l'étudiant :")
+	# student_to_delete = school.get_student_by_id(5)
+	# if student_to_delete is None:
+	# print("Aucun étudiant trouvé avec l'id 5.")
+	# else:
+	# deleted = StudentDao().delete(student_to_delete)
+	# print("Étudiant 5 supprimé." if deleted else "L'étudiant 5 n'a pas été supprimé.")
+	
 	# Suppression d'un teacher de la BD
-	#print("suppression de l'enseignant :")
-	#teacher_to_delete = school.get_teacher_by_id(7)
-	#if teacher_to_delete is None:
-	#print("Aucun enseignant trouvé avec l'id 7.")
-	#else:
-	#print("Enseignant 7 supprimé.")
-
+	# print("suppression de l'enseignant :")
+	# teacher_to_delete = school.get_teacher_by_id(7)
+	# if teacher_to_delete is None:
+	# print("Aucun enseignant trouvé avec l'id 7.")
+	# else:
+	# print("Enseignant 7 supprimé.")
+	
 	# Demande d'ajout d'un cours
-	#try:
-	#id_teacher = int(input("Entrez l'id de l'enseignant du cours : "))
-	#except ValueError:
-	#print("L'id de l'enseignant doit être un nombre entier.")
-	#else:
-	#teacher = school.get_teacher_by_id(id_teacher)
-	#if teacher is None:
-	#print(f"Aucun enseignant trouvé avec l'id {id_teacher}.")
-	#else:
-	#informatique = Course("Informatique", date(2026, 9, 15), date(2026, 10, 15))
-	#informatique.set_teacher(teacher)
-	#informatique.id = CourseDao().create(informatique)
-	#print(f"Cours ajouté : {informatique}")
-
-
-
+	# try:
+	# id_teacher = int(input("Entrez l'id de l'enseignant du cours : "))
+	# except ValueError:
+	# print("L'id de l'enseignant doit être un nombre entier.")
+	# else:
+	# teacher = school.get_teacher_by_id(id_teacher)
+	# if teacher is None:
+	# print(f"Aucun enseignant trouvé avec l'id {id_teacher}.")
+	# else:
+	# informatique = Course("Informatique", date(2026, 9, 15), date(2026, 10, 15))
+	# informatique.set_teacher(teacher)
+	# informatique.id = CourseDao().create(informatique)
+	# print(f"Cours ajouté : {informatique}")
+	
+	# Demande de modification de la ville d'une adresse
+	# try:
+	# 	id_address = int(input("Entrez l'id de l'adresse à modifier : "))
+	# 	new_city = input("Entrez la nouvelle ville : ").strip()
+	# except ValueError:
+	# 	print("L'id de l'adresse doit être un nombre entier.")
+	# else:
+	# 	address_to_update = school.get_address_by_id(id_address)
+	# 	if address_to_update is None:
+	# 		print(f"Aucune adresse trouvée avec l'id {id_address}.")
+	# 	elif not new_city:
+	# 		print("La ville ne peut pas être vide.")
+	# 	else:
+	# 		address_to_update.city = new_city
+	# 		updated = AddressDao().update(address_to_update)
+	# 		print("Ville mise à jour." if updated else "La ville n'a pas été mise à jour.")
+	
+	# Demande de modification du code postal d'une adresse
+	# try:
+	# 	id_address = int(input("Entrez l'id de l'adresse à modifier : "))
+	# 	new_postal_code = int(input("Entrez le nouveau code postal : "))
+	# except ValueError:
+	# 	print("L'id et le code postal doivent être des nombres entiers.")
+	# else:
+	# 	address_to_update = school.get_address_by_id(id_address)
+	# 	if address_to_update is None:
+	# 		print(f"Aucune adresse trouvée avec l'id {id_address}.")
+	# 	else:
+	# 		address_to_update.postal_code = new_postal_code
+	# 		updated = AddressDao().update(address_to_update)
+	# 		print(
+	# 			"Code postal mis à jour."
+	# 			if updated else "Le code postal n'a pas été mis à jour."
+	#		)
+	
+	# Demande de modification du nom d'un étudiant
+	update_student_name(school)
+	
 	# initialisation d'un ensemble de cours, enseignants et élèves composant l'école
-	#school.init_static()
-
+	# school.init_static()
+	
 	# affichage de la liste des cours, leur enseignant et leurs élèves
-	#school.display_courses_list()
-
+	# school.display_courses_list()
+	
 	print("cours :")
 	print(school.get_course_by_id(1))
 	print(school.get_course_by_id(2))
 	print(school.get_course_by_id(9))
 	print()
-
+	
 	print("adresse :")
 	print(school.get_address_by_id(1))
 	print(school.get_address_by_id(2))
@@ -101,10 +199,6 @@ Bienvenue dans notre école
 	print("professeur :")
 	print(school.get_teacher_by_id(1))
 	print(school.get_teacher_by_id(8))
-
-
-
-
 
 
 if __name__ == '__main__':
