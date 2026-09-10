@@ -4,7 +4,7 @@
 """
 Application de gestion d'une école
 """
-from datetime import date
+from datetime import date, datetime
 
 from business import school
 from business.school import School
@@ -85,6 +85,43 @@ def create_student(school: School) -> None:
 	print(f"Étudiant ajouté : {student}")
 
 
+def create_teacher(school: School) -> None:
+	"""Demande confirmation puis crée un enseignant avec son adresse."""
+	create_confirmation = input("Voulez-vous créer un enseignant ? (oui/non) : ").strip().lower()
+	if create_confirmation not in ("oui", "o", "y"):
+		print("Création de l'enseignant annulée.")
+		return
+	
+	first_name = input("Entrez le prénom de l'enseignant : ").strip()
+	last_name = input("Entrez le nom de l'enseignant : ").strip()
+	try:
+		age = int(input("Entrez l'âge de l'enseignant : "))
+		hiring_date = datetime.strptime(
+			input("Entrez la date d'embauche (AAAA-MM-JJ) : "),
+			"%Y-%m-%d",
+		).date()
+		postal_code = int(input("Entrez le code postal : "))
+	except ValueError:
+		print("L'âge, le code postal ou la date d'embauche est invalide.")
+		return
+	
+	street = input("Entrez la rue : ").strip()
+	city = input("Entrez la ville : ").strip()
+	if not first_name or not last_name or not street or not city:
+		print("Le prénom, le nom, la rue et la ville sont obligatoires.")
+		return
+	if age < 0 or postal_code < 0:
+		print("L'âge et le code postal doivent être positifs.")
+		return
+	
+	teacher = Teacher(first_name, last_name, age, hiring_date)
+	teacher.address = Address(street, city, postal_code)
+	TeacherDao().create(teacher)
+	school.add_teacher(teacher)
+	school.add_address(teacher.address)
+	print(f"Enseignant ajouté : {teacher}")
+
+
 def main() -> None:
 	"""Programme principal."""
 	print("""\
@@ -97,14 +134,8 @@ Bienvenue dans notre école
 	# Demande de création d'un étudiant
 	create_student(school)
 	
-	# Création d'un teacher avec sa personne et son adresse.
-	# jeanne = Teacher("jeanne", "D'arc", 40, date(2026, 9, 9))
-	# jeanne.address = Address("2 rue du buchet", "Toulouse", 31000)
-	# school.add_teacher(jeanne)
-	# school.add_address(jeanne.address)
-	# school.persons.append(jeanne)
-	# TeacherDao().create(jeanne)
-	# print(f"Teacher ajoute : {jeanne}")
+	# Demande de création d'un enseignant
+	create_teacher(school)
 	
 	## Suppression d'un student de la BD
 	# print("suppression de l'étudiant :")
