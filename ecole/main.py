@@ -122,6 +122,38 @@ def create_teacher(school: School) -> None:
 	print(f"Enseignant ajouté : {teacher}")
 
 
+def delete_student(school: School) -> None:
+	"""Demande confirmation puis supprime un étudiant sélectionné."""
+	delete_confirmation = input("Voulez-vous supprimer un étudiant ? (oui/non) : ").strip().lower()
+	if delete_confirmation not in ("oui", "o", "y"):
+		print("Suppression de l'étudiant annulée.")
+		return
+	
+	try:
+		student_nbr = int(input("Entrez le numéro de l'étudiant à supprimer : "))
+	except ValueError:
+		print("Le numéro de l'étudiant doit être un nombre entier.")
+		return
+	
+	student_to_delete = school.get_student_by_id(student_nbr)
+	if student_to_delete is None:
+		print(f"Aucun étudiant trouvé avec le numéro {student_nbr}.")
+		return
+	
+	print(
+		f"Étudiant sélectionné : prénom = {student_to_delete.first_name}, "
+		f"nom = {student_to_delete.last_name}, âge = {student_to_delete.age}, "
+		f"adresse = {student_to_delete.address}"
+	)
+	final_confirmation = input("Confirmez-vous la suppression ? (oui/non) : ").strip().lower()
+	if final_confirmation not in ("oui", "o", "y"):
+		print("Suppression de l'étudiant annulée.")
+		return
+	
+	deleted = StudentDao().delete(student_to_delete)
+	print("L'étudiant a été supprimé avec succès." if deleted else "L'étudiant n'a pas été supprimé.")
+
+
 def main() -> None:
 	"""Programme principal."""
 	print("""\
@@ -137,14 +169,8 @@ Bienvenue dans notre école
 	# Demande de création d'un enseignant
 	create_teacher(school)
 	
-	## Suppression d'un student de la BD
-	# print("suppression de l'étudiant :")
-	# student_to_delete = school.get_student_by_id(5)
-	# if student_to_delete is None:
-	# print("Aucun étudiant trouvé avec l'id 5.")
-	# else:
-	# deleted = StudentDao().delete(student_to_delete)
-	# print("Étudiant 5 supprimé." if deleted else "L'étudiant 5 n'a pas été supprimé.")
+	# Demande de suppression d'un étudiant
+	delete_student(school)
 	
 	# Suppression d'un teacher de la BD
 	# print("suppression de l'enseignant :")

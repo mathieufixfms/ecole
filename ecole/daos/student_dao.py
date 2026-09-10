@@ -10,18 +10,55 @@ from models.address import Address
 class StudentDao(Dao[Student]):
 	
 	def delete(self, student: Student) -> bool:
-		"""Supprime un étudiant de la BD en se basant sur `student_nbr`."""
+		"""Supprime l'étudiant, sa personne et son adresse si elle est inutilisée."""
 		
 		student_nbr = getattr(student, 'student_nbr', None) or getattr(student, 'id', None)
 		
-		with Dao.connection.cursor() as cursor:
-			sql = "DELETE FROM student WHERE student_nbr = %s"
-			
-			cursor.execute(sql, (student_nbr,))
+		try:
+			with Dao.connection.cursor() as cursor:
+				cursor.execute(
+					"""
+					SELECT s.id_person, p.id_address
+					FROM student s
+					JOIN person p ON s.id_person = p.id_person
+					WHERE s.student_nbr = %s
+					""",
+					(student_nbr,),
+				)
+				student_record = cursor.fetchone()
+				if student_record is None:
+					return False
+				
+				relations = cast(Mapping[str, Optional[int]], student_record)
+				id_person = relations["id_person"]
+				id_address = relations["id_address"]
+				
+				cursor.execute(
+					"DELETE FROM student WHERE student_nbr = %s",
+					(student_nbr,),
+				)
+				student_deleted = cursor.rowcount > 0
+				
+				if id_person is not None:
+					cursor.execute("DELETE FROM person WHERE id_person = %s", (id_person,))
+				
+				if id_address is not None:
+					cursor.execute(
+						"SELECT COUNT(*) AS references_count FROM person WHERE id_address = %s",
+						(id_address,),
+					)
+					references = cast(Mapping[str, int], cursor.fetchone())
+					if references["references_count"] == 0:
+						cursor.execute(
+							"DELETE FROM address WHERE id_address = %s",
+							(id_address,),
+						)
 			
 			Dao.connection.commit()
-			
-			return cursor.rowcount > 0
+			return student_deleted
+		except Exception:
+			Dao.connection.rollback()
+			raise
 	
 	def update(self, student: Student) -> bool:
 		"""Met à jour le prénom et le nom d'un étudiant."""
