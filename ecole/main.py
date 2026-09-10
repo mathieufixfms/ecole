@@ -154,6 +154,39 @@ def delete_student(school: School) -> None:
 	print("L'étudiant a été supprimé avec succès." if deleted else "L'étudiant n'a pas été supprimé.")
 
 
+def delete_teacher(school: School) -> None:
+	"""Demande confirmation puis supprime un enseignant sélectionné."""
+	delete_confirmation = input("Voulez-vous supprimer un enseignant ? (oui/non) : ").strip().lower()
+	if delete_confirmation not in ("oui", "o", "y"):
+		print("Suppression de l'enseignant annulée.")
+		return
+	
+	try:
+		teacher_id = int(input("Entrez l'id de l'enseignant à supprimer : "))
+	except ValueError:
+		print("L'id de l'enseignant doit être un nombre entier.")
+		return
+	
+	teacher_to_delete = school.get_teacher_by_id(teacher_id)
+	if teacher_to_delete is None:
+		print(f"Aucun enseignant trouvé avec l'id {teacher_id}.")
+		return
+	
+	print(
+		f"Enseignant sélectionné : prénom = {teacher_to_delete.first_name}, "
+		f"nom = {teacher_to_delete.last_name}, âge = {teacher_to_delete.age}, "
+		f"date d'embauche = {teacher_to_delete.hiring_date}, "
+		f"adresse = {teacher_to_delete.address}"
+	)
+	final_confirmation = input("Confirmez-vous la suppression ? (oui/non) : ").strip().lower()
+	if final_confirmation not in ("oui", "o", "y"):
+		print("Suppression de l'enseignant annulée.")
+		return
+	
+	deleted = TeacherDao().delete(teacher_to_delete)
+	print("Enseignant supprimé." if deleted else "L'enseignant n'a pas été supprimé.")
+
+
 def main() -> None:
 	"""Programme principal."""
 	print("""\
@@ -172,13 +205,8 @@ Bienvenue dans notre école
 	# Demande de suppression d'un étudiant
 	delete_student(school)
 	
-	# Suppression d'un teacher de la BD
-	# print("suppression de l'enseignant :")
-	# teacher_to_delete = school.get_teacher_by_id(7)
-	# if teacher_to_delete is None:
-	# print("Aucun enseignant trouvé avec l'id 7.")
-	# else:
-	# print("Enseignant 7 supprimé.")
+	# Demande de suppression d'un enseignant
+	delete_teacher(school)
 	
 	# Demande d'ajout d'un cours
 	# try:

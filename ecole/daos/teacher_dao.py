@@ -154,13 +154,50 @@ class TeacherDao(Dao[Teacher]):
 			return cursor.rowcount > 0
 	
 	def delete(self, teacher: Teacher) -> bool:
-		"""Supprime un enseignant de la BD."""
+		"""Supprime l'enseignant, sa personne et son adresse si inutilisée."""
 		
-		with Dao.connection.cursor() as cursor:
-			sql = "DELETE FROM teacher WHERE id_teacher = %s"
-			
-			cursor.execute(sql, (teacher.id,))
+		try:
+			with Dao.connection.cursor() as cursor:
+				cursor.execute(
+					"""
+					SELECT t.id_person, p.id_address
+					FROM teacher t
+					JOIN person p ON t.id_person = p.id_person
+					WHERE t.id_teacher = %s
+					""",
+					(teacher.id,),
+				)
+				teacher_record = cursor.fetchone()
+				if teacher_record is None:
+					return False
+				
+				relations = cast(Mapping[str, Optional[int]], teacher_record)
+				id_person = relations["id_person"]
+				id_address = relations["id_address"]
+				
+				cursor.execute(
+					"DELETE FROM teacher WHERE id_teacher = %s",
+					(teacher.id,),
+				)
+				teacher_deleted = cursor.rowcount > 0
+				
+				if id_person is not None:
+					cursor.execute("DELETE FROM person WHERE id_person = %s", (id_person,))
+				
+				if id_address is not None:
+					cursor.execute(
+						"SELECT COUNT(*) AS references_count FROM person WHERE id_address = %s",
+						(id_address,),
+					)
+					references = cast(Mapping[str, int], cursor.fetchone())
+					if references["references_count"] == 0:
+						cursor.execute(
+							"DELETE FROM address WHERE id_address = %s",
+							(id_address,),
+						)
 			
 			Dao.connection.commit()
-			
-			return cursor.rowcount > 0
+			return teacher_deleted
+		except Exception:
+			Dao.connection.rollback()
+			raise
